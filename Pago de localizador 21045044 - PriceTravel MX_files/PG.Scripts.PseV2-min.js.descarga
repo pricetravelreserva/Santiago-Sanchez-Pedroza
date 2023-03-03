@@ -1,0 +1,112 @@
+﻿
+function pseRequiredElement(id, status)
+{
+   if (status) {
+      $("#" + id).parents(".form-group").addClass("has-danger")
+      $("#" + id).parents(".form-group").find(".form-text").show()
+   } else
+   {
+      $("#" + id).parents(".form-group").removeClass("has-danger")
+      $("#" + id).parents(".form-group").find(".form-text").hide()
+   }
+}
+
+function checkRequiredElements()
+{
+   var result = true
+   
+   var accountType = document.getElementById("PSEAccountType").value
+   var bankCode = document.getElementById("PSEBankCode").value
+   var identityDocumentType = document.getElementById("PSEIdentityDocumentType").value
+   var identityDocumentNumber = document.getElementById("PSEIdentityDocumentNumber").value
+   
+   if (accountType == "-1") {
+      result = false
+      pseRequiredElement("PSEAccountType", true)
+   } else
+      pseRequiredElement("PSEAccountType", false)
+
+   if (bankCode == "-1" || bankCode == "0") {
+      result = false
+      pseRequiredElement("PSEBankCode", true)
+   } else
+      pseRequiredElement("PSEBankCode", false)
+
+   if (identityDocumentType == "") {
+      result = false
+      pseRequiredElement("PSEIdentityDocumentType", true)
+   } else
+      pseRequiredElement("PSEIdentityDocumentType", false)
+
+   if (identityDocumentNumber == "") {
+      result = false
+      pseRequiredElement("PSEIdentityDocumentNumber", true)
+   } else
+      pseRequiredElement("PSEIdentityDocumentNumber", false)
+
+   if (!result)
+      showValidationAlert()
+   else
+      hideAlert()
+
+   return result
+}
+
+
+jQuery('#pseButton').on('click', function (e) {
+   CreatePseTransaction()
+});
+
+function CreatePseTransaction() {
+   if (checkRequiredElements()) {
+      $('#pseButton').prop('disabled', true);
+      var currentButtonText = $("#pseButton").text();
+      $("#pseButton").text('Redireccionado...');
+
+      var accountType = document.getElementById("PSEAccountType").value
+      var bankCode = document.getElementById("PSEBankCode").value
+      var identityDocumentType = document.getElementById("PSEIdentityDocumentType").value
+      var identityDocumentNumber = document.getElementById("PSEIdentityDocumentNumber").value
+      
+      var json = JSON.parse(document.getElementById("thirdPartyCheckoutsInformation").value)
+
+      var body = {
+         "MasterLocatorId": document.getElementById("masterLocatorId").value,
+         "Amount": document.getElementById("pendingToPay").value,
+         "PaymentProcessOptionType": json["PSE"].PaymentProcessOptionType,
+         "Provider": json["PSE"].Provider,
+         "SiteReturnUrl": json["PSE"].SiteReturn,
+         "SpecificProviderDetails": JSON.stringify({ "AccountType": accountType, "BankCode": bankCode, "IdentityDocumentType": identityDocumentType, "IdentityDocumentNumber": identityDocumentNumber, "CompanyPhoneNumber": "(00) 0000-0000" })
+      };
+
+      jQuery.ajax({
+         type: "POST",
+         url: "/CreateThirdPartyCheckoutTransaction",
+         data: JSON.stringify(body),
+         dataType: "json",
+         contentType: 'application/json; charset=utf-8',
+         success: function (response) {
+            if (response.ResponseCode == 0) {
+               if (response.ProviderUrl != "") {
+                  hideAlert()
+                  window.location.href = response.ProviderUrl
+               } else {
+                  $("#pseButton").text(currentButtonText);
+                  $('#pseButton').prop('disabled', false);
+                  showMessageAlert(document.getElementById("thirdPartyCheckoutGenericErrorMessage").value)
+               }
+            }
+            else {
+               $("#pseButton").text(currentButtonText);
+               $('#pseButton').prop('disabled', false);
+               showMessageAlert(response.ResponseMessage)
+            }
+         },
+         error: function (response) {
+            $("#pseButton").text(currentButtonText);
+            $('#pseButton').prop('disabled', false);
+            showMessageAlert(document.getElementById("thirdPartyCheckoutGenericErrorMessage").value)
+         }
+      });
+   }
+}

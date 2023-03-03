@@ -1,0 +1,308 @@
+﻿var Version=1
+var WasMultipagosTPCCreated = false;
+
+//Sets SecureLink Version
+function setVersion(ver) {
+    Version = ver;
+}
+
+//Handlers
+jQuery('#secureLinkCreateLink').on('click', function (e) {
+    if (Version === 2) {
+        hideAlertSecureLink();
+    }
+    getSecureLinkBackend();
+});
+
+jQuery('#secureLinkChangePlans').on('click', function (e) {
+    secureLinkChangePlansVisual();
+    if (Version === 2) {
+        hideAlertSecureLink();
+    }
+});
+
+//BackEnd call to obtain SecureLink
+function getSecureLinkBackend(body) {
+   selectedMSIPlans = getSelectedSecureLinksPlans()
+   var json = JSON.parse(document.getElementById("thirdPartyCheckoutsInformation").value)
+   var body = {
+      "MasterLocatorId": document.getElementById("masterLocatorId").value,
+      "Amount": document.getElementById("pendingToPay").value,
+      "PaymentProcessOptionType": json["Multipagos"].PaymentProcessOptionType,
+      "Provider": json["Multipagos"].Provider,
+      "SiteReturnUrl": json["Multipagos"].SiteReturn,
+      "SpecificProviderDetails": JSON.stringify({ "MSIPlans": (selectedMSIPlans) })
+   };
+   jQuery.ajax({
+      type: "POST",
+      url: "/CreateThirdPartyCheckoutTransaction",
+      data: JSON.stringify(body),
+      dataType: "json",
+      contentType: 'application/json; charset=utf-8',
+      success: function (response) {
+         if (response.ResponseCode === 0) {
+            jQuery('#thirdPartyCheckoutUrl').val(response.CopyUrl);
+            secureLinkPlansDisplayAfterCreation(selectedplansArray);
+            secureLinkCreateLinkVisualSuccess();;
+         }
+         else {
+            jQuery('#thirdPartyCheckoutUrl').val("");
+            printDisplayPlans("");
+            showErrorMessage(response.ResponseMessage);
+         }
+      },
+      error: function () {
+         showErrorMessage();
+         jQuery('#thirdPartyCheckoutUrl').val("");
+         printDisplayPlans("");
+      }
+   });
+}
+
+//Shows Error Message in different Versions
+function showErrorMessage(message) {
+    switch (Version) {
+        case 1:
+            if (message !== "") {
+                toggleSecureLinkError(true, message)
+            }
+            else {
+                toggleSecureLinkError(true, document.getElementById("thirdPartyCheckoutGenericErrorMessage").value)
+            }
+            break;
+        case 2:
+            showMessageAlertWithTitleSecureLink()
+            break;
+        default:
+    }
+}
+
+//Hides Error Message in different Versions
+function hideErrorMessage() {
+    switch (Version) {
+        case 1:
+            toggleSecureLinkError(false, "")
+            break;
+        case 2:
+            hideAlertSecureLink()
+            break;
+        default:
+    }
+}
+
+//Section SecureLink Common Functions
+//Select all for the grid
+function ActivateAllCheckBoxes(box) {
+    jQuery('input[type=checkbox][name^="chkmpTPCPaymentPlan"]').each(function () {
+        if (this.name != "chkmpTPCPaymentPlan-One") {
+            this.checked = box.checked;
+        }
+    });
+}
+
+//If all elements are selected, checks the select all
+function VerifyAll() {
+    let all = jQuery('input[type=checkbox][name^="chkmpTPCPaymentPlan"]').length;
+    let allchecked = jQuery('input[type=checkbox][name^="chkmpTPCPaymentPlan"]:checked').length;
+    jQuery('#chkmpTPCAll').prop('checked', all === allchecked)
+}
+
+///Get selected secure Link payment plans and returns an Array with them
+function getSelectedSecureLinksPlans() {
+    selectedplansArray = []
+    jQuery('input[name^="chkmpTPCPaymentPlan"]').each(function () {
+        control = jQuery(this)
+        if (control.is(':checkbox') && (control.is(':checked'))) {
+            selectedplansArray.push(parseInt(control.val()))
+        }
+    });
+    return selectedplansArray;
+}
+
+/*Displays the secure selected link payment plans text
+ selectedplansArray: Array of Ints with selected plans (use getSelectedSecureLinksPlans()) */
+function secureLinkPlansDisplayAfterCreation(selectedplansArray) {
+    displayplansTextArray = [];
+    jQuery.each(selectedplansArray, function (i, val) {
+        displayplansTextArray.push(jQuery('input[name="chkmpTPCPaymentPlanHidden-' + val + '"]').val());
+    });
+    printDisplayPlans(displayplansTextArray.join(", "));
+}
+
+/*Displays text of plans if empty Hides*/
+function printDisplayPlans(displayplans) {
+    jQuery("#secureLinkPlansDisplay").text(displayplans);
+    let controlId = "";
+    switch (Version) {
+        case 1:
+            controlId = '#H4secureLinkPlansDisplay';
+            break;
+        case 2:
+            controlId = '#pSecureLinkPlansDisplay';
+            break;
+        default:
+    }
+    if (displayplans.length > 0)
+        jQuery(controlId).show();
+    else
+        jQuery(controlId).hide();
+}
+
+///Display functions that are run when clicking SecureLinkChangePlans
+function secureLinkChangePlansVisual() {
+    toggleActionEnabled("secureLinkChangePlans", false);
+    toggleActionEnabled("secureLinkCreateLink", true);
+    toggleSecureLinkGridEnabled(true);
+    toggleSecureLinkCopySectionEnabled(false);
+    toggleSecureLinkError(false, "");
+    jQuery('#thirdPartyCheckoutUrl').val("");
+    printDisplayPlans("");
+}
+
+//Display functions that should be run when clicking GetSecureLinkBackend() and is successful
+function secureLinkCreateLinkVisualSuccess() {
+    toggleActionEnabled("secureLinkChangePlans", true);
+    toggleActionEnabled("secureLinkCreateLink", false) 
+    toggleSecureLinkGridEnabled(false);
+    toggleSecureLinkCopySectionEnabled(true);
+    hideErrorMessage();
+}
+
+//Enables or disables Elements in Secure payments Grid
+function toggleSecureLinkGridEnabled(enabled) {
+    if (enabled)
+        jQuery('.mpTPCControl').each(function () {
+            if (jQuery(this).is(':disabled'))
+                jQuery(this).removeAttr("disabled");
+        });
+    else
+        jQuery('.mpTPCControl').each(function () {
+            if (!jQuery(this).is(':disabled'))
+                jQuery(this).attr("disabled", "disabled");
+        });
+}
+
+//Enables/Disables Action Elements for different versions
+function toggleActionEnabled(id, enabled) {
+    switch (Version) {
+        case 1:
+            toggleHrefEnabled(id, enabled);
+            break;
+        case 2: 
+            toggleButtonEnabled(id, enabled)
+            break;
+        default:
+    }
+}
+
+//Enables or disables securelink input and button section
+function toggleSecureLinkCopySectionEnabled(enabled) {
+    toggleActionEnabled("btnCopyLink", enabled);
+    if (enabled) 
+        jQuery("#thirdPartyCheckoutTooltip").show();
+    else 
+        jQuery("#thirdPartyCheckoutTooltip").hide();
+}
+
+//Copies secure link to clipboard
+function thirdPartyCheckoutCopyToClipboard(message) {
+    let copyText = document.getElementById("thirdPartyCheckoutUrl");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999);
+    document.execCommand("copy");
+    let tooltip = document.getElementById("thirdPartyCheckoutTooltip");
+    tooltip.innerHTML = message;
+}
+
+//Tooltip functions that notifies secure link was copied to clipboard
+function outFunc(message) {
+    let tooltip = document.getElementById("thirdPartyCheckoutTooltip");
+    tooltip.innerHTML = message;
+}
+
+//Version 1 
+//Fuction only runs First Time when selecting secure link on tab
+jQuery('.tab-multipagos').on('click', function (e) {
+    setVersion(1);
+    if (!WasMultipagosTPCCreated) {
+        WasMultipagosTPCCreated = true;
+        toggleActionEnabled("secureLinkChangePlans", false);
+        toggleActionEnabled("secureLinkCreateLink", false);
+        printDisplayPlans("");
+        toggleSecureLinkCopySectionEnabled(false);
+        getSecureLinkBackend();
+    }
+});
+
+// Shows or Hides Error Message
+function toggleSecureLinkError(enabled, message) {
+    let errorMessage = '<p> {message} </p>';
+    jQuery("#divError").html(errorMessage.replace('{message}', message));
+    if (enabled)
+        jQuery("#divError").show();
+    else
+        jQuery("#divError").hide();
+}
+
+//Disables or enables HTML element For version 1
+function toggleHrefEnabled(id, enabled) {
+    if (enabled) {
+        if (jQuery("#" + id).hasClass("disabled"))
+            jQuery("#" + id).removeClass("disabled");
+    }
+    else {
+        if (!jQuery("#" + id).hasClass("disabled")) {
+            jQuery("#" + id).addClass("disabled");
+            jQuery("#" + id).blur();
+        }
+    }
+}
+
+//For Version 2
+//Fuction only runs First Time when selecting secure link on Menu
+function ActivateFirstTimeSecureLink() {
+    setVersion(2);
+    if (!WasMultipagosTPCCreated) {
+        WasMultipagosTPCCreated = true;
+        toggleActionEnabled("secureLinkChangePlans", false);
+        toggleActionEnabled("secureLinkCreateLink", false);
+        printDisplayPlans("");
+        toggleSecureLinkCopySectionEnabled(false);
+        getSecureLinkBackend();
+    }
+}
+
+//Enables or Disables Buttons For version 2
+function toggleButtonEnabled(id, enabled) {
+    if (enabled) {
+        if (jQuery("#" + id).is(':disabled')) {
+            jQuery("#" + id).removeAttr("disabled");
+            jQuery("#" + id).removeClass("button--disabled");
+        }
+    }
+    else
+        if (!jQuery("#" + id).is(':disabled')) {
+            jQuery("#" + id).attr("disabled", "disabled");
+            jQuery("#" + id).addClass("button--disabled");
+        }
+}
+
+//Shows Alert Message for version 2
+function showMessageAlertWithTitleSecureLink() {
+    let title = jQuery("#SecureLinkAlertTitle").val();
+    let message = jQuery("#SecureLinkAlertMessage").val();
+    jQuery("#ValidationAlert").hide();
+    jQuery("#AnnouncementAlert").show();
+    jQuery("#announcementAlertTitle").text(title);
+    jQuery("#MessageAlert").html(message);
+}
+
+//Hides Alert Message for version 2
+function hideAlertSecureLink() {
+    let originalTitle = $("#originalAlertTitle").val();
+    jQuery("#ValidationAlert").hide();
+    jQuery("#AnnouncementAlert").hide();
+    jQuery("#announcementAlertTitle").text(originalTitle);
+    jQuery("#MessageAlert").text("");
+}
+

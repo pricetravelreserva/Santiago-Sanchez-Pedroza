@@ -1,0 +1,762 @@
+﻿function getNameMonth(numberOfMonth) {
+    var culture = document.getElementById('culture-code').value || '';
+    var name = '';
+    const months = {
+        culturees: {
+            0: 'enero',
+            1: 'febrero',
+            2: 'marzo',
+            3: 'abril',
+            4: 'mayo',
+            5: 'junio',
+            6: 'julio',
+            7: 'agosto',
+            8: 'septiembre',
+            9: 'octubre',
+            10: 'noviembre',
+            11: 'diciembre'
+        },
+        cultureen: {
+            0: 'january',
+            1: 'february',
+            2: 'march',
+            3: 'april',
+            4: 'may',
+            5: 'june',
+            6: 'july',
+            7: 'august',
+            8: 'september',
+            9: 'october',
+            10: 'november',
+            11: 'december'
+        }
+    };
+
+    switch (culture.toLowerCase()) {
+        case 'en-us':
+            name = months.cultureen[numberOfMonth];
+            break;
+        default:
+            name = months.culturees[numberOfMonth];
+    }
+
+    return name;
+}
+
+function getNameDay(numberOfDay) {
+    var culture = document.getElementById('culture-code').value || '';
+    var name = '';
+    const days = {
+        culturees: {
+            0: 'domingo',
+            1: 'lunes',
+            2: 'martes',
+            3: 'miércoles',
+            4: 'jueves',
+            5: 'viernes',
+            6: 'sábado'
+        },
+        cultureen: {
+            0: 'sunday',
+            1: 'monday',
+            2: 'tuesday',
+            3: 'wednesday',
+            4: 'thursday',
+            5: 'friday',
+            6: 'saturday'
+        }
+    };
+
+    switch (culture.toLowerCase()) {
+        case 'en-us':
+            name = days.cultureen[numberOfDay];
+            break;
+        default:
+            name = days.culturees[numberOfDay];
+    }
+
+    return name;
+}
+
+function getDateTimeWithFormat(datetime) {
+    var culture = document.getElementById('culture-code').value || '';
+    var text = '';
+
+    switch (culture.toLowerCase()) {
+        case 'en-us':
+            text = getNameDay(datetime.getDay()) + ' ' + getNameMonth(datetime.getMonth()) + ' ' + datetime.getDate() + ', ' + datetime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            break;
+        default:
+            text = getNameDay(datetime.getDay()) + ' ' + datetime.getDate() + ' de ' + getNameMonth(datetime.getMonth()) + ', ' + datetime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    return text;
+}
+
+function loader(flag) {
+   $(".loader__content")[0].innerHTML = $("#splash_text").val();
+
+   if (flag) {
+      $('.loader__fullpage').addClass("loader__active");
+   } else {
+      $('.loader__fullpage').removeClass("loader__active");
+   }
+}
+
+function payLoader(flag) {
+   $(".loader__content")[0].innerHTML = $("#splash_text_pay").val();
+
+   if (flag) {
+      $('.loader__fullpage').addClass("loader__active");
+   } else {
+      $('.loader__fullpage').removeClass("loader__active");
+   }
+}
+
+function hideAlert()
+{
+   $("#ValidationAlert").hide();
+   $("#AnnouncementAlert").hide();
+   $("#MessageAlert").text("");
+   if (activePayMethod ==='multipagos') {
+       hideAlertSecureLink();
+   }  
+}
+
+function showValidationAlert()
+{
+   $("#ValidationAlert").show();
+   if ($("#MessageAlert").html() == "")
+   {
+      $("#AnnouncementAlert").hide();
+   }
+}
+
+function showMessageAlert(message)
+{
+    if (message != undefined && message != "") {
+        $("#ValidationAlert").hide();
+        $("#AnnouncementAlert").show();
+        $("#MessageAlert").html(message);
+    }  
+}
+
+var activePayMethod = "";
+
+function showPayMethod(option,uri="") {
+   switch (option)
+   {
+      case 'efecty':
+         CreateEfectyTransaction(uri);
+         break;
+       case 'multipagos':
+         ActivateFirstTimeSecureLink();
+           break;
+       case 'bancolombia':
+           GetAcceptanceToken('ThirdPartyCheckoutTransactions');
+           break;
+      default:
+         break;
+   } 
+   $("#pay-method-list").hide();
+   $("#pay-method-details").show();
+   activePayMethod = option;
+   setPayMethodHiddenFields()
+   $("#" + activePayMethod).show();
+}
+
+
+function setPayMethodHiddenFields() {
+    switch (activePayMethod)
+    {
+        case "creditCard":
+            $('#payMethod').val(1);
+            $('#payProcessOptionType').val(1);
+            $('#paymentGatewayPayType').val(1);
+            break;
+        case "agencyVirtualCards":
+            $('#payMethod').val(1);
+            $('#payProcessOptionType').val(1);
+            $('#paymentGatewayPayType').val(2);
+            break;
+        case "multipagos":
+            $('#payMethod').val(1);
+            $('#payProcessOptionType').val(1);
+            $('#paymentGatewayPayType').val(3);
+            break;
+        case "redirectionOption":
+            $('#payMethod').val(1);
+            $('#payProcessOptionType').val(1);
+            $('#paymentGatewayPayType').val(4);
+            break;
+        case "pse ":
+            $('#payMethod').val(2);
+            $('#payProcessOptionType').val(4);
+            $('#paymentGatewayPayType').val(5);
+            break;
+        case "redemptionPointsCreditCard":
+            $('#payMethod').val(1);
+            $('#payProcessOptionType').val(8);
+            $('#paymentGatewayPayType').val(1);          
+            activePayMethod = "creditCard";            
+            break;
+        case "wallet":
+            $('#payMethod').val(20);
+            $('#payProcessOptionType').val(0);
+            $('#paymentGatewayPayType').val(1);
+            activePayMethod = "wallet";
+            break;
+        case "bancolombia":
+            $('#payMethod').val(22);
+            $('#payProcessOptionType').val(0);
+            $('#paymentGatewayPayType').val(1);
+            activePayMethod = "bancolombia";
+            break;
+    } 
+}
+
+function showMethodList()
+{
+   hideAlert();
+   $("#" + activePayMethod).hide();
+   $("#pay-method-details").hide();
+   $("#pay-method-list").show();
+
+}
+
+function getCheckedValue(name, defaultValue) {
+   var e = document.getElementsByName(name);
+   for (var i = 0; i < e.length; i++) {
+      if (e[i].checked) return e[i].value;
+   }
+   return (defaultValue ? defaultValue : '');
+}
+
+function getValueOrDefault(name, defaultValue) {
+   var e = document.getElementsByName(name);
+   if (e.length == 0)
+      return (defaultValue ? defaultValue : '');
+   return e[0].value;
+}
+
+$(document).ready(function () {
+   //Summary - Expandir
+   $(".summary .summary__collapsed .summary-heading .expand").on("click", function (e) {
+      e.preventDefault();
+      $(this).parent().parent().parent().parent().find(".summary__expanded").addClass("is--show");
+      $(this).parent().parent().parent().parent().find(".summary__collapsed").addClass("is--hidden");
+   });
+   //Summary - Ocultar
+   $(".summary .summary__expanded .summary-heading .expand").on("click", function (e) {
+      e.preventDefault();
+      $(this).parent().parent().parent().removeClass("is--show");
+      $(this).parent().parent().parent().parent().find(".summary__collapsed").removeClass("is--hidden");
+   });
+   //Radio Button Accordeon
+   $('.form-check-dropdown .form-check__input').change(function () {
+      if ($(this).is(":checked")) {
+         $('.form-textfield-reason').removeClass("is--hidden");
+      } else {
+         $('.form-textfield-reason').addClass("is--hidden");
+      }
+   });
+   //ícono de tipo/franquicia de tarjeta
+   $("#tc-number-div input").payment('formatCardNumber', {
+      callback: function (result) {
+         if (result == null) {
+            $('#tc-number-div input').removeClass('error');
+            $('#tc-number-div .icon-bank').removeClass().addClass('icon-bank ');
+         } else if (result["class"] == 'unknown') {
+            $('#tc-number-div .icon-bank').removeClass().addClass('icon-bank ');
+            $('#tc-number-div input').addClass('error');
+         } else {
+            //Muestra icono ***************************************************************************
+            $('#tc-number-div input').removeClass('error');
+            $('#tc-number-div .icon-bank').removeClass().addClass('icon-bank icon-bank-' + result["class"]);
+         }
+      }
+   });
+   //campo de expiración
+   $("#cardExpired").on("keyup", expiryDay);
+   $("#cardExpired").change(setExpiration);
+
+   //Comportamiento de los modales/dropdown del booker
+   //En móvil no se activa el focus en los inputs
+   if ($(window).width() < 576) {
+      $(".modal-mobile-header button").on("click", function () {
+         $(this).parent().parent().removeClass("modal-mobile-show");
+      });
+      $("div[class^='booker-section-'] > .form-group").on("click", function (e) {
+         $(this).parent().find(".modal-mobile").addClass("modal-mobile-show");
+         $(this).find(".form-text-field input[type=text]").attr('readonly', true);
+         $(this).find(".form-text-field input[type=text]").blur();
+         $(this).parent().find(".modal-mobile .modal-mobile-content .form-group .form-text-field input[type=text]").focus();
+      });
+   }
+   //En escritorio sí funciona el focus
+   else {
+      $(".booker-section-item .form-group").on("click", function (e) {
+         $(this).find(".form-text-field input[type=text]").atrr('readonly', false);
+         $(this).find(".form-text-field input[type=text]").focus();
+      });
+      $(".booker-section-item .form-group .form-text-field input[type=text]").focusin(function () {
+         $(this).parent().parent().parent().find(".modal-mobile").addClass("modal-mobile-show");
+      }).focusout(function () {
+         $(this).parent().parent().parent().find(".modal-mobile").removeClass("modal-mobile-show");
+      });
+   }
+});
+
+var expiryDay = function () {
+   var inputChar = String.fromCharCode(event.keyCode);
+   var code = event.keyCode;
+   var allowedKeys = [8];
+   if (allowedKeys.indexOf(code) !== -1) {
+      return;
+   }
+   event.target.value = event.target.value
+      .replace(/^([1-9]\/|[2-9])$/g, "0$1/")
+      .replace(/^(0[1-9]|1[0-2])$/g, "$1/")
+      .replace(/^([0-1])([3-9])$/g, "0$1/$2")
+      .replace(/^(0?[1-9]|1[0-2])([0-9]{2})$/g, "$1/$2")
+      .replace(/^([0]+)\/|[0]+$/g, "0")
+      .replace(/[^\d\/]|^[\/]*$/g, "")
+      .replace(/\/\//g, "/");
+};
+
+function setExpiration() {
+   var splitValues = $("#cardExpired").val().split('/');
+   $("#cardMonthExpired").val(splitValues[0]);
+   $("#cardYearExpired").val("20" + splitValues[1]);
+}
+
+var handleSuccessValid = function (o,processpy = '') {
+   var isValid = true;
+   var result = xmlToString(o.documentElement.childNodes);
+   var json = $.parseJSON(result);
+   var brokenRules = json.brokenRules;
+
+   $(".has-danger").removeClass(" has-danger");
+   $(".form-text").hide();
+   showMessageAlert("")
+   hideAlert();
+
+   if (brokenRules.length != 0) {
+      for (var i = 0; i < brokenRules.length; i++) {
+         try {
+            if (brokenRules[i].isValid) {              
+                  $("#" + brokenRules[i].name).parent().parent().removeClass(" has-danger");
+                  $("#" + brokenRules[i].name).parent().parent().find(".form-text").hide();
+                  $("#" + brokenRules[i].name).parent().parent().find(".form-text")[0].innerHTML = "";               
+            } else {
+               if (brokenRules[i].name == 'paymentOptionsError') {
+                  showMessageAlert(brokenRules[i].explainMessage);
+               } else {
+                  $("#" + brokenRules[i].name).parent().parent().addClass(" has-danger");
+                  $("#" + brokenRules[i].name).parent().parent().find(".form-text").show();
+
+                  if ($($("#" + brokenRules[i].name).parent().parent().find(".form-text")[0]).is('small')) {
+                     $("#" + brokenRules[i].name).parent().parent().find(".form-text")[0].innerText = brokenRules[i].message.replace("<li>", "").replace("</li>", "");
+                  }
+                  else {
+                     $("#" + brokenRules[i].name).parent().parent().find(".form-text")[0].innerHTML = brokenRules[i].message.replace("<li>", "").replace("</li>", "");
+                  }                  
+                  showValidationAlert();
+               }
+
+               isValid = false;
+            }
+         } catch { }
+      }
+   }
+
+    var partialAmount = parseFloatWithCulture($('#partialAmount').val());
+    if (isValid) {
+        $('#partialAmount').val(partialAmount);
+        hideAlert();
+        $("#formProcessPayment").attr('action', processpy != '' ? processpy : 'procesar-pago');
+        $("#formProcessPayment").submit();
+    } else {
+      $("#button-creditcard")[0].disabled = false;
+      jQuery("input[name*='validatePayForms']").each(function () { $(this).disabled = false; })
+      payLoader(false);
+      document.body.scrollTop = 0; // For Safari
+      document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
+    }
+};
+
+var handleFailureValid = function (o) {
+   $("#button-creditcard")[0].disabled = false;
+   jQuery("input[name*='validatePayForms']").each(function () { $(this).disabled = false; })
+   showValidationAlert();
+   payLoader(false);
+   document.body.scrollTop = 0; // For Safari
+   document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
+};
+
+function xmlToString(childNodes) {
+   var result = '';
+   for (var i = 0; i < childNodes.length; i++) {
+      result += childNodes[i].nodeValue;
+   }
+   return result;
+}
+
+function onPaymentPlanClick(sumarizedPaymentPlan) {
+    $("#paymentPlan").val(sumarizedPaymentPlan);
+    $('#redemptionPointsBankId').val(-1000)
+    $('.ap_points').find(".form-text").hide();
+    $('#pointRedemption').val(false); 
+}
+
+function onPointsPaymentPlanClick(elem) {
+    var bankId = $(elem).val();
+    $('#redemptionPointsBankId').val(bankId);
+    $('#pointRedemption').val(true);    
+    $("#paymentPlan").val(1);    
+    activePayMethod = "redemptionPointsCreditCard";
+    setPayMethodHiddenFields();
+    $(elem).parents('.ap_points').find(".form-text").show();
+}
+
+
+function isValidCVU(uri = '',thirdpartyuri = '') {
+    var cvuValidation = {
+        "Amount": parseFloat($('#amount').val()),
+        "PartialAmountValue": parseFloatWithCulture($('#partialAmountCVU').val()),
+        "Token": $('#token').val(),
+        "MasterLocatorId": document.getElementById("masterLocatorId").value,
+        "Currency": $('#currency').val(),
+        "IdentityDocumentType": $('#identityDocumentTypeCVU').val(),
+        "IdentityDocumentNumber": $('#identityDocumentNumberCVU').val(),
+        "DiscalimerAccepted": document.getElementById('cvuAgreement').checked ? true : false
+    }
+
+	var urival = uri != '' ? uri : '/ValidateCVU';
+	
+    $.ajax({
+        type: "POST",
+        url: urival,
+        data: JSON.stringify(cvuValidation),
+        dataType: "json",
+        contentType: 'application/json; charset=utf-8',
+        success: function (response) {
+           if (handleSuccessPath(response))
+           {
+			   if(thirdpartyuri != ''){
+				   CreateCVUTransaction("redirecting",thirdpartyuri);
+			   }
+			   else{
+				CreateCVUTransaction("redirecting");   
+			   }
+               
+           }
+
+        },
+        error: function (response) {
+            handleFailurePath(response)
+            return false;
+        }
+    });
+
+}
+
+function CreateCVUTransaction(messageText,uri = '') {
+        payLoader(true);
+        var button = $('#cvuButton'); 
+        button.prop('disabled', true);
+        var currentButtonText = button.text();
+        button.text(messageText);
+        var partialAmount = parseFloatWithCulture($('#partialAmountCVU').val())
+        var json = JSON.parse(document.getElementById("thirdPartyCheckoutsInformation").value)
+        var identityDocumentType = document.getElementById("identityDocumentTypeCVU").value
+        var identityDocumentNumber = document.getElementById("identityDocumentNumberCVU").value
+
+        var body = {
+            "MasterLocatorId": document.getElementById("masterLocatorId").value,
+            "Amount": partialAmount,
+            "PaymentProcessOptionType": json["CVU"].PaymentProcessOptionType,
+            "Provider": json["CVU"].Provider,
+            "SiteReturnUrl": json["CVU"].SiteReturn,
+            "SpecificProviderDetails": JSON.stringify({ "IdentityDocumentType": identityDocumentType, "IdentityDocumentNumber": identityDocumentNumber })
+        };
+	    var uridest = uri != '' ? uri : '/CreateThirdPartyCheckoutTransaction';
+        $.ajax({
+            type: "POST",
+            url: uridest,
+            data: JSON.stringify(body),
+            dataType: "json",
+            contentType: 'application/json; charset=utf-8',
+            success: function (response) {
+                if (response.ResponseCode == 0) {
+                        hideAlert()
+                    if (response.ProviderUrl != undefined && response.ProviderUrl != "") {
+                        window.location.href = response.ProviderUrl
+                    } else {
+                        payLoader(false);
+                        button.text(currentButtonText);
+                        button.prop('disabled', false);
+                        showMessageAlert(document.getElementById("thirdPartyCheckoutGenericErrorMessage").value)
+                    }
+                }
+                else {
+                    payLoader(false);
+                    button.text(currentButtonText);
+                    button.prop('disabled', false);
+                    showMessageAlert(response.ResponseMessage)
+                }
+            },
+            error: function (response) {
+                payLoader(false);
+                button.text(currentButtonText);
+                button.prop('disabled', false);
+                showMessageAlert(document.getElementById("thirdPartyCheckoutGenericErrorMessage").value)
+            }
+        });
+}
+
+
+function isValidWallet(uri = '') {
+    var walletValidation = {
+        "Amount": parseFloat($('#amount').val()),
+        "PartialAmountValue": parseFloatWithCulture($('#partialAmountWallet').val()),
+        "Token": $('#token').val(),
+        "MasterLocatorId": document.getElementById("masterLocatorId").value,
+        "Currency": $('#currency').val()      
+    }
+
+    var urival = '/ValidateWallet';
+        
+    $.ajax({
+        type: "POST",
+        url: urival,
+        data: JSON.stringify(walletValidation),
+        dataType: "json",
+        contentType: 'application/json; charset=utf-8',
+        success: function (response) {
+            if (handleSuccessPath(response)) {
+                var partialAmount = parseFloatWithCulture($('#partialAmount').val());
+                $('#partialAmount').val(partialAmount);
+                hideAlert();
+                $("#formProcessPayment").attr('action', '/procesar-pago');
+                $("#formProcessPayment").submit();
+            }
+            //else {
+            //    $("#button-creditcard")[0].disabled = false;
+            //    jQuery("input[name*='validatePayForms']").each(function () { $(this).disabled = false; })
+            //    payLoader(false);
+            //    document.body.scrollTop = 0; // For Safari
+            //    document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
+            //}
+        },
+        error: function (response) {
+            handleFailurePath(response)
+            return false;
+        }
+    });
+}
+
+var handleSuccessPath = function (result) {
+    var isValid = true;
+    var brokenRules = result.data.BrokenRules;
+
+    $(".has-danger").removeClass(" has-danger");
+    $(".form-text").hide();
+    showMessageAlert("")
+    hideAlert();
+
+    if (brokenRules.length != 0) {
+        for (var i = 0; i < brokenRules.length; i++) {
+            try {
+                if (brokenRules[i].IsValid) {
+                        $("#" + brokenRules[i].Name).parent().parent().removeClass(" has-danger");
+                        $("#" + brokenRules[i].Name).parent().parent().find(".form-text").hide();
+                        $("#" + brokenRules[i].Name).parent().parent().find(".form-text")[0].innerHTML = "";
+                    }
+                 else {
+                        $("#" + brokenRules[i].Name).parent().parent().addClass(" has-danger");
+                        $("#" + brokenRules[i].Name).parent().parent().find(".form-text").show();
+
+                        if ($( $("#" + brokenRules[i].Name).parent().parent().find(".form-text")[0]).is('small')) {
+                            $("#" + brokenRules[i].Name).parent().parent().find(".form-text")[0].innerText = brokenRules[i].Message.replace("<li>", "").replace("</li>", "");
+                        }
+                        else {
+                            $("#" + brokenRules[i].Name).parent().parent().find(".form-text")[0].innerHTML = brokenRules[i].Message.replace("<li>", "").replace("</li>", "");
+                        }
+                        
+                        showValidationAlert();
+                        isValid = false;
+                }
+            } catch { }
+        }
+    }
+
+    if (isValid) {
+        hideAlert();
+
+
+    } else {
+        jQuery("input[name*='validatePayForms']").each(function () { $(this).disabled = false; })
+        payLoader(false);
+        document.body.scrollTop = 0; // For Safari
+        document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
+    }
+
+    return isValid;
+};
+
+var handleFailurePath = function (o) {
+    jQuery("input[name*='validatePayForms']").each(function () { $(this).disabled = false; })
+    showValidationAlert();
+    payLoader(false);
+    document.body.scrollTop = 0; // For Safari
+    document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
+};
+
+function CreateEfectyTransaction(uri = '') {
+    payLoader(true);
+    $('.page-information-efecty, .page-error').hide();
+
+    var body = {
+        'masterLocatorId': $('#masterLocatorId').val(),
+        'type': 'efecty',
+        'amount': $("#pendingToPay").val()
+    };
+    
+	var uridest = uri != '' ? uri : '/CreateCorrespondentPaymentsTransaction';
+	
+    $.ajax({
+        type: 'POST',
+        url: uridest,
+        data: JSON.stringify(body),
+        dataType: 'json',
+        contentType: 'application/json; charset=utf-8',
+        success: function (response) {
+            hideAlert();
+            if (response.ResponseCode == 0) {
+                var patt = new RegExp('(-|[0-9])+');
+                var res = patt.exec(response.ExpirationDate);
+                if (response.AgreementNumber && response.ClientReference && res && res[0]) {
+                    var expDt = new Date(parseInt(res[0]));
+                    var dtString = getDateTimeWithFormat(expDt);
+                    $('#efecty-expiration').text(dtString);
+                    $('#efecty-agreement').text(response.AgreementNumber);
+                    $('#efecty-reference').text(response.ClientReference);
+                    $('.page-information-efecty').show();
+                    $('.page-error').hide();
+                }
+                else {
+                    $('.page-information-efecty').hide();
+                    $('.page-error').show();
+                }
+                payLoader(false);
+            } else {
+                $('.page-information-efecty').hide();
+                $('.page-error').show();
+                payLoader(false);
+            }
+        },
+        error: function (response) {
+            $('.page-information-efecty').hide();
+            $('.page-error').show();
+            payLoader(false);
+        }
+    });
+}
+
+
+function GetAcceptanceToken(uri = '') {
+    try {
+        payLoader(true);
+        var json = JSON.parse(document.getElementById("thirdPartyCheckoutsInformation").value);
+        $('#bancolombia').show();
+        $('.page-error').hide();
+        var body = {
+            'providerConfigId': json["Bancolombia"].ThirdPartyProviderConfigId
+        };
+        var uridest = uri != '' ? uri : '/GetAcceptanceToken';
+        $.ajax({
+            type: 'POST',
+            url: '/ThirdPartyCheckoutTransactions/GetAcceptanceToken',
+            data: JSON.stringify(body),
+            dataType: 'json',
+            contentType: 'application/json; charset=utf-8',
+            success: function (response) {
+                hideAlert();
+                payLoader(false);
+                if (response.ProviderRequestInformation.acceptanceToken != null && response.ProviderRequestInformation.acceptanceToken != "") {
+                    var aTyC = document.getElementById('aTyC');
+                    aTyC.href = response.ProviderRequestInformation.permalink;
+                    document.getElementById('AcceptanceToken').value = response.ProviderRequestInformation.acceptanceToken;
+                } else {
+                    $('#bancolombia').hide();
+                    $('.page-error').show();
+                }
+            },
+            error: function (response) {
+                $('#bancolombia').hide();
+                $('.page-error').show();
+                payLoader(false);
+            }
+        });
+    } catch (err) {
+        $('#bancolombia').hide();
+        $('.page-error').show();
+        payLoader(false);
+    }
+}
+
+function CreateBancolombiaTransaction(uri = '') {
+    try {
+        payLoader(true);
+        var json = JSON.parse(document.getElementById("thirdPartyCheckoutsInformation").value);
+        $('#bancolombia').show();
+        $('.page-error').hide();
+        var body = {
+            "MasterLocatorId": document.getElementById("masterLocatorId").value,
+            "Amount": parseFloat($('#amount').val()),
+            "PaymentProcessOptionType": "Bancolombia",
+            "Provider": "Bancolombia",
+            "SiteReturnUrl": json["Bancolombia"].SiteReturn,
+            "SpecificProviderDetails": "{'LegalIdType':'CC','AcceptanceToken':'" + document.getElementById("AcceptanceToken").value + "', 'LegalId':''}"
+        };
+
+        var uridest = uri != '' ? uri : '/CreateThirdPartyCheckoutTransaction';
+        $.ajax({
+            type: 'POST',
+            url: '/ThirdPartyCheckoutTransactions/CreateThirdPartyCheckoutTransaction',
+            data: JSON.stringify(body),
+            dataType: 'json',
+            contentType: 'application/json; charset=utf-8',
+            success: function (response) {
+                hideAlert();
+                payLoader(false);
+                if (response.ProviderRequestInformation.redirectUrl != null) {
+                    location.href = response.ProviderRequestInformation.redirectUrl;
+                } else {
+                    $('#bancolombia').hide();
+                    $('.page-error').show();
+                }
+            },
+            error: function (response) {
+                $('#bancolombia').hide();
+                $('.page-error').show();
+                payLoader(false);
+            }
+        });
+    } catch (err) {
+        $('#bancolombia').hide();
+        $('.page-error').show();
+        payLoader(false);
+    }
+}
+
+document.getElementById('chkConfirm').addEventListener('change', (event) => {
+    if (event.currentTarget.checked) {
+        document.getElementById("btnCompletarReservacion").disabled = false;
+        document.getElementById("btnCompletarReservacion").classList.remove('button--disabled');
+    } else {
+        document.getElementById("btnCompletarReservacion").disabled = true;
+        document.getElementById("btnCompletarReservacion").classList.add('button--disabled');
+    }
+})
